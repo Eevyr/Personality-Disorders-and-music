@@ -210,8 +210,6 @@ pairsplot <- ggpairs(weighted_disorder_data,
   scale_fill_manual(values = colours) +
   theme(axis.text = element_text(size = 7)) 
 
-pairsplot
-
 # Save the plot
 ggsave(filename = here::here(file_path,"pairs_plot.png") , width = 10, plot = pairsplot, device = "png")
 
