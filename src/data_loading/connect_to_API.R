@@ -2,18 +2,35 @@ library(httr)
 library(readr)
 library(utils)
 library(archive)
+library(spotifyr)
+library(dplyr)
 
-api_authentification <-function(){
+api_authentification <-function(API_type){
   
-  # Get Kaggle API credentials from environment variables
-  kaggle_username <- Sys.getenv("KAGGLE_USERNAME")
-  kaggle_key <- Sys.getenv("KAGGLE_KEY")
+  if(API_type == "Kaggle") {
+    
+    # Get Kaggle API credentials from environment variables
+    username <- Sys.getenv("KAGGLE_USERNAME")
+    key <- Sys.getenv("KAGGLE_KEY")
+  }
+  else {
+    username <- Sys.getenv("SPOTIFY_CLIENT_ID")
+    key <- Sys.getenv("SPOTIFY_CLIENT_SECRET")
+  }
   
-  # Set up the authentication
-  auth <- authenticate(user = kaggle_username, password = kaggle_key)
+  if (username == "" || key == "") {
+    warning("Spotify credentials are not set!")
+  }
+  
+  if(API_type == "Kaggle") {
+    # Set up the authentication
+    auth <- authenticate(user = username, password = key)
+  }
+  else {
+    auth <- spotifyr::get_spotify_access_token()
+  }
   
   print("authentification API set up")
   
   return(auth)
 }
-
