@@ -3,15 +3,15 @@ Analyzing correlations between individuals with Mental Disorders (such as border
 
 Source of the Kaggle dataset : https://www.kaggle.com/datasets/rrmartin/twitter-mental-disorder-tweets-and-musics
 
-To complete this dataset with useful information of each music and artist, I used the Spotify API and retrived the features of all the accessible musics present on the original Kaggle dataset.
+To complete this dataset with useful information of each music and artist, I used the Spotify API and retrieved the features of all the accessible musics present on the original Kaggle dataset.
 
 Here are the three main objectives of this exploratory data analysis :
 
 - Find the tendances and popularity of artists of each disorder group, leading to correlations between disorders
 
-- Visualize the links between disorders and music taste in terms of genre of music
+- Visualize the links between disorders and the tempo, danceability and features of musics
 
-- Visualize the links between disorders and the tempo, danceability and other features of musics
+- Visualize the links between disorders and music taste in terms of genre of music
 
 
 WARNING : To be able to reproduce this analysis from scratch, the most time-consuming step will be to retreive the data from Spotify API, so the final combined dataset has been uploaded in Kaggle and it is this one that will be loaded into R at the start of the scripts (see section on data folder and dataset creation folder).
@@ -44,7 +44,7 @@ There is no need to run this script at any point since I uploaded the final new 
 
 ### analysis
 
-This folder is used to perform the three different EDAs described in the beginning of the README, one folder for each analysis.
+This folder is used to perform the three (at the moment two only are available) different EDAs described in the beginning of the README, one folder for each analysis.
 
 Running the scripts in each of those three folder will create and download the plots useful (in the "outputs" folder) for the final report of this dataset.
 
@@ -108,7 +108,7 @@ This guide will help you create a Kaggle account, obtain your API credentials, a
 
 ### OPTIONAL STEP (time-consuming) : creation of the features and genres dataset from scratch
 
-To re-create the two spotify-related datasets from scratch by collecting features of data found in the initial Kaggle dataset, you will have to set up Spotify API credentials and then run the necessary scripts.
+To re-create the spotify-related dataset from scratch by collecting features of tracks found in the initial Kaggle dataset, you will have to set up Spotify API credentials and then run the necessary scripts.
 
 Although, this step is heavily time-consuming, and would clearly need to be optimized.
 
@@ -146,10 +146,8 @@ Once you have this error, you can click on "rotate client secret" in your spotif
 
 The dataset will be loaded into your 'data/derived' folder and updated each time you run the script and the error occur or the dataset has been entirely read.
 
-### STEP 2 : Run the analysis
+### STEP 2 : Run the analyses
 
+To run the first analyse, run the script in 'analyses/disorder_vs_music_popularity'.
 
-
-### Running analysis
-
-One analysis at a time
+To run the second analyse, run the script in 'analyses/disorder_vs_music_features'.
