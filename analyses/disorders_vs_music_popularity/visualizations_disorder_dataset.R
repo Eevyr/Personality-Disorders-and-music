@@ -1,10 +1,7 @@
-# Script to make some first exploratory data analyses
+# Script for the first exploratory data analyses
 
 source(here::here("src", "data_loading", "load_datasets.R"))
-
-library("ggplot2")                     
-library("GGally")
-library("tidyverse")
+source(here::here("src", "data_visualizations", "save_plots.R"))
 library(ggnewscale)
 library(tidyverse)
 library(ggplot2)
@@ -13,17 +10,23 @@ library(corrplot)
 library(colorspace)
 library(patchwork)
 
+#=============================================================================== 
+# Load the dataset needed and useful variables ----
+#===============================================================================
+
 # load dataset
 url <- "https://www.kaggle.com/api/v1/datasets/download/rrmartin/twitter-mental-disorder-tweets-and-musics?datasetVersionNumber=1"
-datasets <- load_kaggle_musics(url)
+datasets <- load_kaggle_dataset(url)
 
 control_dataset = datasets$"anon_control_musics"
 disorder_dataset = datasets$"anon_disorder_musics"
 
+combined_dataset <- rbind(disorder_dataset, control_dataset)
+
 # Path to save the plots
 file_path <- here::here("outputs", "disorders_vs_music_popularity")
 
-# Setting color palettes
+# Setting color palette
 lajoli_palette <- brewer.pal(n = 10, name = "Set3")
 
 # Define gradient colors for the control dataset
@@ -33,7 +36,13 @@ control_palette <- colorRampPalette(c("#80B1D3", "black"))(7)
 disorder_palette <- colorRampPalette(c("#FDB462", "black"))(7) 
 
 
-# 0. Count unique users for each disorder
+#=============================================================================== 
+# Counting plots ----
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+##  Count unique users for each disorder ---- 
+#-------------------------------------------------------------------------------
 
 num_unique_users <- n_distinct(combined_dataset$user_id)
 
@@ -60,11 +69,11 @@ count_plot_unique_users <- ggplot(disorder_counts_unique_users, aes(x = reorder(
               label = paste0(round(proportion * 100, 1), "%")), 
           vjust = -0.5 , size = 4)
 
-count_plot_unique_users
+save_plot(count_plot_unique_users, file_path, "bar_plot_count_unique.png")
 
-ggsave(filename = here::here(file_path,"bar_plot_count_unique.png") , plot = count_plot_unique_users, device = "png")
-
-# 1. Plot the counts of mentionned disorders
+#-------------------------------------------------------------------------------
+##  Count number of mentions for each disorder ---- 
+#-------------------------------------------------------------------------------
 
 num_mentions <- nrow(combined_dataset)
 
@@ -76,6 +85,7 @@ disorder_proportions <- combined_dataset %>%
   group_by(disorder) %>%
   summarize(proportion = n() / num_mentions)
 
+# Plot the number of mentions for each disorder
 count_plot <- ggplot(disorder_counts, aes(x = reorder(disorder, -n), y = n, fill = disorder)) +
   geom_bar(stat = "identity", size = 0.5) +
   scale_fill_manual(values = lajoli_palette) +
@@ -89,12 +99,15 @@ count_plot <- ggplot(disorder_counts, aes(x = reorder(disorder, -n), y = n, fill
                 label = paste0(round(proportion * 100, 1), "%")), 
             vjust = -0.5 , size = 4)
 
-count_plot
+save_plot(count_plot, file_path, "bar_plot_count.png")
 
-ggsave(filename = here::here(file_path,"bar_plot_count.png") , plot = count_plot, device = "png")
+#=============================================================================== 
+# Top 7 artists popularity ----
+#===============================================================================
 
-
-# 2. Plot the mentions of the top 7 artists for control dataset AND disorder dataset
+#-------------------------------------------------------------------------------
+##  Plot the mentions of top 7 artists for control and disorder dataset ---- 
+#-------------------------------------------------------------------------------
 
 top_n <- 7
 
@@ -159,107 +172,19 @@ podium_plot <- ggplot() +
             color = top_artists_control$text_color, 
             size = 3, vjust = 0.5, angle = 90) +
   
-  # Adding aesthetics
   coord_flip() +
-  # Remove intermediate colors from legend
   labs(title = "Top 7 Artists by Number of Mentions in Tweets (Control vs Disorder)",
        x = "Popularity Proportion",
        y = "Artist") +
   theme_minimal() +
   theme(axis.text.x = element_blank()) 
 
-ggsave(filename = here::here(file_path,"podium_plot.png") , width = 10, plot = podium_plot, device = "png")
+save_plot(podium_plot, file_path, "podium_plot.png", width = 10)
 
 
-# 3. Pairs plot to see the influence of each disorders and their correlations
-
-# Merge proportions with the disorder data
-weighted_disorder_dataset <- combined_dataset %>%
-  inner_join(disorder_proportions, by = "disorder") %>%
-  mutate(weight = 1 / proportion)
-
-# Spread the data so each disorder becomes a column
-weighted_disorder_data <- weighted_disorder_dataset %>%
-  count(artist, disorder, wt = weight) %>%
-  spread(key = disorder, value = n, fill = 0)
-
-# Define popularity levels
-popularity_levels <- c("Very Popular", "Popular", "Other")
-
-# Create a new column for popularity level
-artist_counts <- artist_counts %>%
-  arrange(desc(n)) %>%
-  mutate(popularity_level = cut(row_number(), 
-                                breaks = c(0, 3, 9, Inf), 
-                                labels = popularity_levels,
-                                include.lowest = TRUE))
-
-# Merge popularity levels with the disorder data
-merged_data <- merge(weighted_disorder_data, artist_counts, by = "artist", all.x = TRUE)
-
-weighted_disorder_data$popularity <- merged_data$popularity_level
-
-colours <- adjust_transparency(c("#FDB462", "#FB8072","#80B1D3"), alpha = 0.8)
-
-# Plot pairs plot with weighted data
-pairsplot <- ggpairs(weighted_disorder_data, 
-                     columns = 2:(ncol(weighted_disorder_data) - 1), 
-                     aes(color = popularity)) + 
-  theme_minimal() + 
-  scale_color_manual(values = colours) +
-  scale_fill_manual(values = colours) +
-  theme(axis.text = element_text(size = 7)) 
-
-# Save the plot
-ggsave(filename = here::here(file_path,"pairs_plot.png") , width = 10, plot = pairsplot, device = "png")
-
-##Positive Correlation: If the points tend to rise together, it indicates that higher counts of one disorder tend to be associated with higher counts of another disorder.
-##Negative Correlation: If the points tend to fall together, it indicates that higher counts of one disorder tend to be associated with lower counts of another disorder.
-
-
-# 4. Bar Plot of Disorder Counts by Artist
-
-top_n <- 3
-
-# Filter to get only the top 7 artists for disorder dataset 
-artist_frequencies <- combined_dataset %>%
-  count(artist) %>%
-  mutate(frequency = n / sum(n)) %>%
-  arrange(desc(frequency))
-
-top_artists_combined <- artist_frequencies %>%
-  top_n(top_n, frequency)
-
-top_artists <- top_artists_combined %>% pull(artist)
-
-
-# Calculer la somme des valeurs pour chaque artiste
-artist_totals <- weighted_disorder_data %>%
-  mutate(total = rowSums(select(., -artist, -popularity)))
-
-# Calculer les proportions
-weighted_disorder_data_prop <- artist_totals %>%
-  mutate(across(-c(artist, total), ~ . / total)) %>%
-  select(-total)
-
-filtered_weighted_disorder_data <- weighted_disorder_data_prop %>%
-  filter(artist %in% top_artists)
-
-data_long <- pivot_longer(filtered_weighted_disorder_data, cols = !c(artist, popularity), names_to = "disorder", values_to = "count")
-
-barplot <- ggplot(data_long, aes(x = reorder(artist, -count), y = count, fill = disorder)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  scale_fill_manual(values = lajoli_palette) +
-  labs(title = "Disorder Weighted Percentages by Artist",
-       x = "Artist",
-       y = "Percentage") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggsave(filename = here::here(file_path,"bar_plot.png") , plot = barplot, device = "png")
-
-
-# 5. Plot top 7 artists for each disorder in percentage
+#-------------------------------------------------------------------------------
+##  Plot top 7 artists for each disorder in percentage ---- 
+#-------------------------------------------------------------------------------
 
 # Count the occurrences of each artist for each disorder
 artist_counts <- disorder_dataset %>%
@@ -302,19 +227,95 @@ for (i in 1:6) {
 # Facetting
 artistsperdisorder <- wrap_plots(artistsperdisorder, nrow = 3)
 
-ggsave(filename = here::here(file_path,"7_artists_per_disorder_plot.png") , height = 10, plot = artistsperdisorder, device = "png")
+save_plot(artistsperdisorder, file_path, "7_artists_per_disorder_plot.png", height = 10)
 
 
-# 6. Violin Plot of Disorder Counts
+#=============================================================================== 
+# Correlation between disorders ----
+#===============================================================================
 
-violinplot <- ggplot(data_long, aes(x = disorder, y = count, fill = disorder)) +
-  geom_violin() +
-  labs(title = "Violin Plot of Disorder Counts",
-       x = "Disorder",
-       y = "Count") +
-  theme_minimal() +
+#-------------------------------------------------------------------------------
+##  Pairs plot to see the influence between disorders ---- 
+#-------------------------------------------------------------------------------
+
+# Merge proportions with the disorder data
+weighted_disorder_dataset <- combined_dataset %>%
+  inner_join(disorder_proportions, by = "disorder") %>%
+  mutate(weight = 1 / proportion)
+
+# Spread the data so each disorder becomes a column
+weighted_disorder_data <- weighted_disorder_dataset %>%
+  count(artist, disorder, wt = weight) %>%
+  spread(key = disorder, value = n, fill = 0)
+
+# Define popularity levels
+popularity_levels <- c("Very Popular", "Popular", "Other")
+
+# Create a new column for popularity level
+artist_counts <- artist_counts %>%
+  arrange(desc(n)) %>%
+  mutate(popularity_level = cut(row_number(), 
+                                breaks = c(0, 3, 9, Inf), 
+                                labels = popularity_levels,
+                                include.lowest = TRUE))
+
+# Merge popularity levels with the disorder data
+merged_data <- merge(weighted_disorder_data, artist_counts, by = "artist", all.x = TRUE)
+
+weighted_disorder_data$popularity <- merged_data$popularity_level
+
+colours <- adjust_transparency(c("#FDB462", "#FB8072","#80B1D3"), alpha = 0.8)
+
+# Plot pairs plot with weighted data
+pairsplot <- ggpairs(weighted_disorder_data, 
+                     columns = 2:(ncol(weighted_disorder_data) - 1), 
+                     aes(color = popularity)) + 
+  theme_minimal() + 
+  scale_color_manual(values = colours) +
+  scale_fill_manual(values = colours) +
+  theme(axis.text = element_text(size = 7)) 
+
+save_plot(pairsplot, file_path, "pairs_plot.png", width = 10)
+
+#-------------------------------------------------------------------------------
+##  Bar Plot of Disorder Counts by Artist (3 most famous) ---- 
+#-------------------------------------------------------------------------------
+
+top_n <- 3
+
+# Filter to get only the top 7 artists for disorder dataset 
+artist_frequencies <- combined_dataset %>%
+  count(artist) %>%
+  mutate(frequency = n / sum(n)) %>%
+  arrange(desc(frequency))
+
+top_artists_combined <- artist_frequencies %>%
+  top_n(top_n, frequency)
+
+top_artists <- top_artists_combined %>% pull(artist)
+
+
+# Calculer la somme des valeurs pour chaque artiste
+artist_totals <- weighted_disorder_data %>%
+  mutate(total = rowSums(select(., -artist, -popularity)))
+
+# Calculer les proportions
+weighted_disorder_data_prop <- artist_totals %>%
+  mutate(across(-c(artist, total), ~ . / total)) %>%
+  select(-total)
+
+filtered_weighted_disorder_data <- weighted_disorder_data_prop %>%
+  filter(artist %in% top_artists)
+
+data_long <- pivot_longer(filtered_weighted_disorder_data, cols = !c(artist, popularity), names_to = "disorder", values_to = "count")
+
+barplot <- ggplot(data_long, aes(x = reorder(artist, -count), y = count, fill = disorder)) +
+  geom_bar(stat = "identity", position = "dodge") +
   scale_fill_manual(values = lajoli_palette) +
+  labs(title = "Disorder Weighted Percentages by Artist",
+       x = "Artist",
+       y = "Percentage") +
+  theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave(filename = here::here(file_path,"violin_plot.png") , plot = violinplot, device = "png")
-
+save_plot(barplot, file_path, "bar_plot.png")
