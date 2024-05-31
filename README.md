@@ -28,19 +28,19 @@ This project is organized as follows :
 
 ### data
 
-The data/raw folder is intentionally empty as the dataset needed is really heavy for github to support it. 
+The data/raw folder is intentionally empty as the dataset needed is really heavy for github to support it, but is downloaded from kaggle when running the first EDA script.
 
-To re-create from scratch the dataset I used, you would need to download and/or load the first dataset available from Kagle and complete it by fetching the features of each song thanks to Spotify API. The script used for this - and explaining the steps of it - is in the folder "dataset creation" of the project.
-A subset of this dataset is present in data/example folder.
+To re-create from scratch the two other dataset I used, you would need to download and/or load the first dataset available from Kagle and complete it by fetching the features of each song thanks to Spotify API. The scripts used for this - and explaining the steps of it - is in the folder "dataset creation" of the project.
+A subset of those datasets is present in data/example folder.
 
-But since downloading the necessary dataset using Spotify API for all the data points present in the Kaggle datasets is really long and cumbersome, I uploaded this newly constructed dataset into Kaggle. It is this one that is by default loaded into R at the start of the analysis, thanks to Kaggle API.
+But since downloading the necessary features and genres using Spotify API for all the data points or unique artists present in the Kaggle datasets is really long and cumbersome, I uploaded those newly constructed datasets into Kaggle. It is those ones that are by default downloaded in the dervied folder and loaded into R at the start of the analysis, thanks to Kaggle API.
 
 For this you therefore will need to set up Kaggle API credentials into .Rprofile at the source of your project. (see section on "How to run the project")
 
 ### dataset creation
 
-This folder is made of the scripts used to create the dataset used in the analysis. 
-There is no need to run this script at any point since I uploaded the final new dataset on Kaggle. 
+This folder is made of the scripts used to create the two "spotify - related" datasets used in thetwo last analysis. 
+There is no need to run this script at any point since I uploaded the final new datasets on Kaggle. 
 
 ### analysis
 
@@ -106,9 +106,9 @@ This guide will help you create a Kaggle account, obtain your API credentials, a
    - Close your current R session and start a new one to ensure that the changes to the `.Rprofile` file are loaded.
 
 
-### OPTIONAL STEP (time-consuming) : creation of the dataset from scratch
+### OPTIONAL STEP (time-consuming) : creation of the features and genres dataset from scratch
 
-To re-create the dataset from scratch by collecting features of data found in the initial Kaggle dataset, you will have to set up Spotify API credentials and then run the necessary scripts.
+To re-create the two spotify-related datasets from scratch by collecting features of data found in the initial Kaggle dataset, you will have to set up Spotify API credentials and then run the necessary scripts.
 
 Although, this step is heavily time-consuming, and would clearly need to be optimized.
 
@@ -141,8 +141,8 @@ This guide will help you create a Spotify Developer account, obtain your API cre
    
 #### 2. Run script to create the dataset
 
-After setting up the spotify API credentials, you can run the script on the folder 'dataset creation'. Although, as the Spotify credentials are available only for one hour you will most surely get the error "401". 
-Once you have this error, you can click on "rotate client secret" in your spotify app credentials settings, an update the client secret of your `.Rprofile`.
+After setting up the spotify API credentials, you can run the scripts on the folder 'dataset creation'. Although, as the Spotify credentials are available only for one hour you will most surely get the error "401".
+Once you have this error, you can click on "rotate client secret" in your spotify app credentials settings, and update the client secret of your `.Rprofile`.
 
 The dataset will be loaded into your 'data/derived' folder and updated each time you run the script and the error occur or the dataset has been entirely read.
 
