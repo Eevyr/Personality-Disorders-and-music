@@ -238,6 +238,9 @@ save_plot(artistsperdisorder, file_path, "7_artists_per_disorder_plot.png", heig
 ##  Pairs plot to see the influence between disorders ---- 
 #-------------------------------------------------------------------------------
 
+artist_counts <- combined_dataset %>%
+  count(artist)
+
 # Merge proportions with the disorder data
 weighted_disorder_dataset <- combined_dataset %>%
   inner_join(disorder_proportions, by = "disorder") %>%
@@ -275,7 +278,7 @@ pairsplot <- ggpairs(weighted_disorder_data,
   scale_fill_manual(values = colours) +
   theme(axis.text = element_text(size = 7)) 
 
-save_plot(pairsplot, file_path, "pairs_plot.png", width = 10)
+save_plot(pairsplot, file_path, "pairs_plot.png", width = 12, height = 10)
 
 #-------------------------------------------------------------------------------
 ##  Bar Plot of Disorder Counts by Artist (3 most famous) ---- 
