@@ -1,14 +1,27 @@
+# Script of useful functions to be able to load the datasets either for kaggle 
+# or spotify
+
 library(httr)
 library(readr)
 library(utils)
 library(archive)
 
+#=============================================================================== 
+# Kaggle ----
+#===============================================================================
+
+#' Load a dataset from the downloaded csv file in data directory
+#'
+#' @param final are we considering the inital dataset found on kaggle 
+#' or the one reated by this project an uploaded to kaggle ?
+#'
+#' @return the dataset variable
 load_kaggle_dataset_from_file <- function(final){
   datasets <- list() 
   
   directory <- here::here("data", ifelse(!final,"raw", "derived"))
 
-  # List all files in the data/raw directory
+  # List all files in the specified directory
   csv_files <- list.files(directory, pattern = "\\.csv$")
 
   for (csv_file in csv_files) {
@@ -27,12 +40,27 @@ load_kaggle_dataset_from_file <- function(final){
   return(datasets)
 }
 
+#=============================================================================== 
+# Spotify ----
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+##  Get music features ---- 
+#-------------------------------------------------------------------------------
+
+#' Find the id of a song thanks to spotify API
+#'
+#' @param artist the name of the artist we are looking for
+#' @param track_title the title of the song we are looking for
+#' @param access_token to have access to spotify API
+#'
+#' @return the id of the track ( or NULL if not found )
 find_id_track <- function(artist,track_title, access_token){
   
   # Construct the search query
   query <- paste0("artist:", artist, " track:", track_title)
 
-    # Make the request to Spotify API
+  # Make the request to Spotify API
   response <- GET(
     url = "https://api.spotify.com/v1/search",
     query = list(
@@ -64,15 +92,23 @@ find_id_track <- function(artist,track_title, access_token){
   return(track_id)
 }
 
+#' Get the music features with spotify API thanks to track ids
+#'
+#' @param kaggle_dataset_chunk a chunk of the initial kaggle dataset that holds 
+#' the necessary info to get the ids of each song and that needs to be completed
+#' @param access_token to have access to spotify API
+#'
+#' @return the completed kaggle_dataset_chunk with music features
 load_spotify_tracks <- function(kaggle_dataset_chunk, access_token){
   
-  #Apply the function to each row in the dataset
+  # Get track ids
   track_ids <- apply(kaggle_dataset_chunk[, c("artist", "title")], 1, function(x) {
     Sys.sleep(0.05)
     find_id_track(x[1], x[2], access_token)
   })
-  
   track_ids_str_list <- paste(track_ids, collapse = ",")
+  
+  # Get track features based on track ids
   track_features_list <- get_track_audio_features(track_ids_str_list)
   
   # Combine the features into a single data frame
@@ -87,4 +123,67 @@ load_spotify_tracks <- function(kaggle_dataset_chunk, access_token){
   
   return(kaggle_dataset_chunk)
 }
+
+#-------------------------------------------------------------------------------
+##  Get artists genres ---- NOT USED YET
+#-------------------------------------------------------------------------------
+
+#' Find the artist's genre thanks to spotify API
+#'
+#' @param artist_name 
+#' @param access_token 
+#'
+#' @return the genre of the artist
+find_genres_artist <- function(artist_name, access_token){
+  search_url <- paste0('https://api.spotify.com/v1/search?q=', URLencode(artist_name), '&type=artist')
+  search_response <- GET(search_url, add_headers(Authorization = paste('Bearer', access_token)))
+  
+  if (status_code(search_response) == 200) {
+    search_data <- fromJSON(content(search_response, as = "text", encoding = "UTF-8"))
+    
+    if (length(search_data$artists$items) > 0) {
+      genres <- search_data$artists$items$genres[[1]]
+      if (length(genres) == 0) {
+        return(NULL)
+      } else {
+        return(paste(genres, collapse = ", "))
+      }
+    } else {
+      return(NULL)
+    }
+  } else if (status_code(search_response) == 400){ 
+    return(NULL)
+  } else {
+    cat("Error : ", status_code(search_response) )
+    return("STOP")
+  } 
+}
+
+#' Load the genres corresponding to the artists in kaggle_dataset_chunk
+#'
+#' @param kaggle_dataset_chunk the chunk of data that we need to get genres for
+#' @param access_token 
+#'
+#' @return kaggle_dataset_chunk updated
+load_spotify_genre <- function(kaggle_dataset_chunk, access_token){
+  
+  #Apply the function to each row in the dataset
+  artist_genres <- apply(kaggle_dataset_chunk, 1, function(x) {
+    find_genres_artist(x[1], access_token)
+  })
+  
+  if ("STOP" %in% artist_genres) {
+    return(data.frame())
+  }
+  
+  artist_genres <- lapply(artist_genres, function(x) if (is.null(x)) NA else x)
+  
+  genres_df <- data.frame(genres = unlist(artist_genres), stringsAsFactors = FALSE)
+  
+  # Step 2: Create a new data frame with artists and their genres
+  kaggle_dataset_chunk$genres = genres_df$genre
+  
+  return(kaggle_dataset_chunk)
+}
+
 
